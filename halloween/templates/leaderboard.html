@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - Halloween Drink Counter{% endblock %}
+
+{% block content %}
+<div class="leaderboard-page">
+    <h1 class="halloween-title">🏆 Drinking Champions 🏆</h1>
+    <p class="subtitle">See who's leading the pack!</p>
+    
+    <div class="leaderboard-container" id="leaderboard-container">
+        <div class="loading">Loading leaderboard...</div>
+    </div>
+    
+    <div class="nav-buttons">
+        <a href="{{ url_for('counter') }}" class="btn-secondary">
+            Back to Counter 🎃
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    async function loadLeaderboard() {
+        const container = document.getElementById('leaderboard-container');
+        
+        try {
+            const response = await fetch('{{ url_for("api_participants") }}');
+            const participants = await response.json();
+            
+            container.innerHTML = '';
+            
+            if (participants.length === 0) {
+                container.innerHTML = '<div class="no-data">No participants yet. Be the first to join!</div>';
+                return;
+            }
+            
+            const maxCount = participants[0]?.count || 1;
+            
+            participants.forEach((participant, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'leaderboard-bar';
+                
+                const percentage = maxCount > 0 ? (participant.count / maxCount) * 100 : 0;
+                
+                bar.innerHTML = `
+                    <div class="bar-label">
+                        <span class="bar-name">${participant.name}</span>
+                        <span class="bar-count">${participant.count}</span>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: ${percentage}%"></div>
+                    </div>
+                `;
+                
+                container.appendChild(bar);
+            });
+        } catch (error) {
+            console.error('Error loading leaderboard:', error);
+            container.innerHTML = '<div class="error">Failed to load leaderboard</div>';
+        }
+    }
+    
+    // Load leaderboard on page load
+    loadLeaderboard();
+</script>
+{% endblock %}
+

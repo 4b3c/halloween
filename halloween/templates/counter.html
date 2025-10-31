@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Drink Counter - {{ name }}{% endblock %}
+
+{% block content %}
+<div class="counter-page">
+    <div class="user-header">
+        <h1 class="user-name">👻 {{ name }} 👻</h1>
+        <p class="subtitle">Track your drinks!</p>
+    </div>
+    
+    <div class="counter-display">
+        <div class="count-label">Drinks</div>
+        <div class="count-number" id="drink-count">{{ count }}</div>
+    </div>
+    
+    <div class="button-group">
+        <button class="btn-counter btn-minus" id="decrement-btn">
+            <span class="btn-icon">-</span>
+        </button>
+        <button class="btn-counter btn-plus" id="increment-btn">
+            <span class="btn-icon">+</span>
+        </button>
+    </div>
+    
+    <div class="nav-buttons">
+        <a href="{{ url_for('leaderboard') }}" class="btn-secondary">
+            View Leaderboard 🏆
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    // Initialize counter page
+    const countDisplay = document.getElementById('drink-count');
+    
+    // Handle increment button
+    document.getElementById('increment-btn').addEventListener('click', async () => {
+        try {
+            const response = await fetch('{{ url_for("increment") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                countDisplay.textContent = data.count;
+                countDisplay.classList.add('pulse');
+                setTimeout(() => countDisplay.classList.remove('pulse'), 300);
+            }
+        } catch (error) {
+            console.error('Error incrementing:', error);
+        }
+    });
+    
+    // Handle decrement button
+    document.getElementById('decrement-btn').addEventListener('click', async () => {
+        try {
+            const response = await fetch('{{ url_for("decrement") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                countDisplay.textContent = data.count;
+                countDisplay.classList.add('pulse');
+                setTimeout(() => countDisplay.classList.remove('pulse'), 300);
+            }
+        } catch (error) {
+            console.error('Error decrementing:', error);
+        }
+    });
+</script>
+{% endblock %}
+

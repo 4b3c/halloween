@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Join the Party - Halloween Drink Counter{% endblock %}
+
+{% block content %}
+<div class="join-page">
+    <h1 class="halloween-title">🎃 Happy Halloween 🎃</h1>
+    <p class="subtitle">Join the Drink Counter Party!</p>
+    
+    <form method="POST" action="{{ url_for('join') }}" class="join-form">
+        <input 
+            type="text" 
+            name="name" 
+            placeholder="Enter your name..." 
+            required 
+            autofocus
+            class="name-input"
+        >
+        <button type="submit" class="btn-primary btn-large">
+            Join the Party! 🦇
+        </button>
+    </form>
+</div>
+{% endblock %}
+
