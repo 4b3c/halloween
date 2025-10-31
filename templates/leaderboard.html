@@ -4,66 +4,145 @@
 
 {% block content %}
 <div class="leaderboard-page">
-    <h1 class="halloween-title">🏆 Drinking Champions 🏆</h1>
-    <p class="subtitle">See who's leading the pack!</p>
-    
-    <div class="leaderboard-container" id="leaderboard-container">
-        <div class="loading">Loading leaderboard...</div>
+    <div class="leaderboard-header-small">
+        <span class="spider">🕷️</span>
+        <span class="pumpkin">🎃</span>
+        <h1 class="halloween-title-small">The Beer Board</h1>
+        <div class="qr-code-section">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://halloween-woyh.onrender.com/" alt="QR Code" class="qr-code">
+        </div>
     </div>
     
-    <div class="nav-buttons">
-        <a href="{{ url_for('counter') }}" class="btn-secondary">
-            Back to Counter 🎃
-        </a>
+    <div class="leaderboard-container-large" id="leaderboard-container">
     </div>
+
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
-    async function loadLeaderboard() {
-        const container = document.getElementById('leaderboard-container');
-        
-        try {
-            const response = await fetch('{{ url_for("api_participants") }}');
-            const participants = await response.json();
-            
-            container.innerHTML = '';
-            
-            if (participants.length === 0) {
-                container.innerHTML = '<div class="no-data">No participants yet. Be the first to join!</div>';
-                return;
-            }
-            
-            const maxCount = participants[0]?.count || 1;
-            
-            participants.forEach((participant, index) => {
-                const bar = document.createElement('div');
-                bar.className = 'leaderboard-bar';
-                
-                const percentage = maxCount > 0 ? (participant.count / maxCount) * 100 : 0;
-                
-                bar.innerHTML = `
-                    <div class="bar-label">
-                        <span class="bar-name">${participant.name}</span>
-                        <span class="bar-count">${participant.count}</span>
-                    </div>
-                    <div class="bar-container">
-                        <div class="bar-fill" style="width: ${percentage}%"></div>
-                    </div>
-                `;
-                
-                container.appendChild(bar);
-            });
-        } catch (error) {
-            console.error('Error loading leaderboard:', error);
-            container.innerHTML = '<div class="error">Failed to load leaderboard</div>';
-        }
-    }
-    
-    // Load leaderboard on page load
-    loadLeaderboard();
-</script>
-{% endblock %}
+    // Keep previous counts so we can detect changes
+    const prevCounts = new Map();
 
+    // CSS.escape fallback for older browsers
+    if (!window.CSS || !CSS.escape) {
+      window.CSS = window.CSS || {};
+      CSS.escape = CSS.escape || function (s) {
+        return String(s).replace(/[^a-zA-Z0-9_\-]/g, c => '\\' + c.charCodeAt(0).toString(16) + ' ');
+      };
+    }
+
+    async function loadLeaderboard() {
+      const container = document.getElementById('leaderboard-container');
+
+      try {
+        const response = await fetch('{{ url_for("api_participants") }}');
+        const participants = await response.json();
+
+        // Handle empty state
+        if (!participants || participants.length === 0) {
+          // Only render empty state if there are no bars already
+          if (!container.querySelector('.leaderboard-bar')) {
+            container.innerHTML = '<div class="no-data">No participants yet. Be the first to join!</div>';
+          }
+          return;
+        }
+
+        // Sort by count desc (assumes your API already does this, but we ensure)
+        participants.sort((a, b) => b.count - a.count);
+
+        const maxCount = participants[0]?.count || 1;
+        const seen = new Set();
+
+        participants.forEach((p, index) => {
+          const key = p.name; // use name as unique key; switch to an id if you have one
+          const sel = `.leaderboard-bar[data-name="${CSS.escape(key)}"]`;
+          let bar = container.querySelector(sel);
+
+          const percentage = maxCount > 0 ? (p.count / maxCount) * 100 : 0;
+
+          if (!bar) {
+            // Create once
+            bar = document.createElement('div');
+            bar.className = 'leaderboard-bar';
+            bar.dataset.name = key;
+            bar.innerHTML = `
+              <div class="bar-container">
+                <div class="bar-fill">
+                    <span class="bar-name"></span>
+                    <span class="bar-count"></span>
+                </div>
+              </div>
+            `;
+            // Insert at correct position
+            container.appendChild(bar);
+
+            // Initial render: set text and animate once
+            bar.querySelector('.bar-name').textContent = p.name;
+            bar.querySelector('.bar-count').textContent = p.count;
+
+            const fill = bar.querySelector('.bar-fill');
+            // Start from 0 then animate to target
+            fill.style.width = '0%';
+            requestAnimationFrame(() => {
+              fill.style.width = percentage + '%';
+            });
+          } else {
+            // Update label text always
+            bar.querySelector('.bar-name').textContent = p.name;
+            bar.querySelector('.bar-count').textContent = p.count;
+
+            const oldCount = prevCounts.get(key);
+            const fill = bar.querySelector('.bar-fill');
+
+            if (oldCount !== p.count) {
+              // Count changed → allow transition (animation plays)
+              // (Assumes your CSS has a transition on .bar-fill width)
+              fill.style.width = percentage + '%';
+
+              // Optional: brief highlight to draw attention
+              bar.classList.add('changed');
+              setTimeout(() => bar.classList.remove('changed'), 500);
+            } else {
+              // Unchanged → no re-animation.
+              // Ensure width is correct but don’t re-trigger anything.
+              // Temporarily disable transition to avoid any micro-jank.
+              const prevTransition = fill.style.transition;
+              fill.style.transition = 'none';
+              fill.style.width = percentage + '%';
+              // Force reflow so the browser applies width without anim
+              // eslint-disable-next-line no-unused-expressions
+              fill.offsetHeight;
+              fill.style.transition = prevTransition;
+            }
+          }
+
+          // Keep visual order consistent (if using flexbox, this is handy)
+          bar.style.order = index;
+          seen.add(key);
+          prevCounts.set(key, p.count);
+        });
+
+        // Remove bars for participants no longer present
+        [...container.querySelectorAll('.leaderboard-bar')].forEach(bar => {
+          if (!seen.has(bar.dataset.name)) {
+            container.removeChild(bar);
+            prevCounts.delete(bar.dataset.name);
+          }
+        });
+
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        // Only show error if nothing is rendered yet
+        if (!document.querySelector('.leaderboard-bar')) {
+          container.innerHTML = '<div class="error">Failed to load leaderboard</div>';
+        }
+      }
+    }
+
+    // Initial call + poll
+    loadLeaderboard();
+    setInterval(loadLeaderboard, 2000);
+</script>
+
+{% endblock %}

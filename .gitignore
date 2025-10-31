@@ -37,6 +37,10 @@ ENV/
 instance/
 .webassets-cache
 
+# Data files
+halloween/data.json
+halloween/data/
+
 # Environment variables
 .env
 .env.local
