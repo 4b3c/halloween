@@ -5,7 +5,7 @@
 {% block content %}
 <div class="counter-page">
     <div class="user-header">
-        <h1 class="user-name">👻 {{ name }} 👻</h1>
+        <h1 class="user-name">{{ name }}</h1>
         <p class="subtitle">Track your drinks!</p>
     </div>
     
@@ -23,11 +23,6 @@
         </button>
     </div>
     
-    <div class="nav-buttons">
-        <a href="{{ url_for('leaderboard') }}" class="btn-secondary">
-            View Leaderboard 🏆
-        </a>
-    </div>
 </div>
 {% endblock %}
 
