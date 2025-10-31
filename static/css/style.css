@@ -298,6 +298,7 @@ body {
 .bar-count {
     font-weight: bold;
     color: #ffffff;
+    padding-left: 10px;
 }
 
 .bar-container {
